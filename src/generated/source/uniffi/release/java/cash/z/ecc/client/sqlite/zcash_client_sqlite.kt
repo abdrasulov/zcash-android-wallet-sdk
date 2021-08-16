@@ -439,7 +439,7 @@ internal open class RustCallStatus : Structure() {
     }
 }
 
-class InternalException(message: String) : Exception(message)
+class InternalException(message: String) : java.lang.Exception(message)
 
 // Each top-level error class has a companion object that can lift the error from the call status's rust buffer
 interface CallStatusErrorHandler<E> {
@@ -447,7 +447,8 @@ interface CallStatusErrorHandler<E> {
 }
 
 // Error Error
-sealed class Exception : Exception() {
+// TODO: Exception is probably a bad name for this. Consider a PR upstream to change this to UniFfiException to avoid name collisions like this
+sealed class Exception : java.lang.Exception() {
     // Each variant is a nested class
     class InvalidExtSk : Exception()
     class WrongNetwork : Exception()
@@ -472,7 +473,7 @@ sealed class Exception : Exception() {
 // synchronize itself
 
 // Call a rust function that returns a Result<>.  Pass in the Error class companion that corresponds to the Err
-private inline fun <U, E : Exception> rustCallWithError(errorHandler: CallStatusErrorHandler<E>, callback: (RustCallStatus) -> U): U {
+private inline fun <U, E : java.lang.Exception> rustCallWithError(errorHandler: CallStatusErrorHandler<E>, callback: (RustCallStatus) -> U): U {
     var status = RustCallStatus()
     val return_value = callback(status)
     if (status.isSuccess()) {
