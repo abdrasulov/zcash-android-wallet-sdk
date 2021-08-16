@@ -93,7 +93,10 @@ android {
     sourceSets {
         main {
             java {
-                srcDirs "build/generated/source/grpc"
+                srcDirs = [
+                    "build/generated/source/grpc",
+                    "src/generated/source/uniffi"
+                ]
             }
             proto {
                 srcDir 'src/main/proto'
@@ -213,6 +216,8 @@ dependencies {
     implementation "io.grpc:grpc-stub:_"
     compileOnly 'javax.annotation:javax.annotation-api:_'
 
+    // uniffi
+    implementation "net.java.dev.jna:jna:5.7.0@aar"
 
     //
     // Locked Versions
