@@ -5,6 +5,7 @@ import cash.z.ecc.android.sdk.internal.SdkDispatchers
 import cash.z.ecc.android.sdk.internal.Twig
 import cash.z.ecc.android.sdk.internal.ext.deleteSuspend
 import cash.z.ecc.android.sdk.internal.model.Checkpoint
+import cash.z.ecc.android.sdk.model.Account
 import cash.z.ecc.android.sdk.model.BlockHeight
 import cash.z.ecc.android.sdk.model.UnifiedSpendingKey
 import cash.z.ecc.android.sdk.model.WalletBalance
@@ -99,11 +100,11 @@ internal class RustBackend private constructor(
         }
     }
 
-    override suspend fun getCurrentAddress(account: Int) =
+    override suspend fun getCurrentAddress(account: Account) =
         withContext(SdkDispatchers.DATABASE_IO) {
             getCurrentAddress(
                 dataDbFile.absolutePath,
-                account,
+                account.value,
                 networkId = network.id
             )
         }
@@ -112,11 +113,21 @@ internal class RustBackend private constructor(
 
     override fun getSaplingReceiver(ua: String) = getSaplingReceiverForUnifiedAddress(ua)
 
-    override suspend fun getBalance(account: Int): Zatoshi {
+    override suspend fun listTransparentReceivers(account: Account): List<String> {
+        return withContext(SdkDispatchers.DATABASE_IO) {
+            listTransparentReceivers(
+                dbDataPath = dataDbFile.absolutePath,
+                account = account.value,
+                networkId = network.id
+            ).asList()
+        }
+    }
+
+    override suspend fun getBalance(account: Account): Zatoshi {
         val longValue = withContext(SdkDispatchers.DATABASE_IO) {
             getBalance(
                 dataDbFile.absolutePath,
-                account,
+                account.value,
                 networkId = network.id
             )
         }
@@ -124,11 +135,11 @@ internal class RustBackend private constructor(
         return Zatoshi(longValue)
     }
 
-    override suspend fun getVerifiedBalance(account: Int): Zatoshi {
+    override suspend fun getVerifiedBalance(account: Account): Zatoshi {
         val longValue = withContext(SdkDispatchers.DATABASE_IO) {
             getVerifiedBalance(
-                dataDbFile.absolutePath,
-                account,
+                dbDataPath = dataDbFile.absolutePath,
+                account = account.value,
                 networkId = network.id
             )
         }
@@ -400,6 +411,9 @@ internal class RustBackend private constructor(
 
         @JvmStatic
         private external fun getSaplingReceiverForUnifiedAddress(ua: String): String?
+
+        @JvmStatic
+        private external fun listTransparentReceivers(dbDataPath: String, account: Int, networkId: Int): Array<String>
 
         internal fun validateUnifiedSpendingKey(bytes: ByteArray) =
             isValidSpendingKey(bytes)
