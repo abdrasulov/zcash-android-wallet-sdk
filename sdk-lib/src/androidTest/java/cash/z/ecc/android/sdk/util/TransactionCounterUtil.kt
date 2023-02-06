@@ -11,15 +11,14 @@ import cash.z.ecc.android.sdk.model.ZcashNetwork
 import co.electriccoin.lightwallet.client.BlockingLightWalletClient
 import co.electriccoin.lightwallet.client.model.BlockHeightUnsafe
 import co.electriccoin.lightwallet.client.model.LightWalletEndpoint
+import co.electriccoin.lightwallet.client.model.Response
 import co.electriccoin.lightwallet.client.new
 import org.junit.Ignore
 import org.junit.Test
 
 class TransactionCounterUtil {
-
-    private val network = ZcashNetwork.Mainnet
     private val context = InstrumentationRegistry.getInstrumentation().context
-    private val service = BlockingLightWalletClient.new(context, LightWalletEndpoint.Mainnet)
+    private val lightWalletClient = BlockingLightWalletClient.new(context, LightWalletEndpoint.Mainnet)
 
     init {
         Twig.plant(TroubleshootingTwig())
@@ -29,7 +28,8 @@ class TransactionCounterUtil {
     @Ignore("This test is broken")
     fun testBlockSize() {
         val sizes = mutableMapOf<Int, Int>()
-        service.getBlockRange(
+
+        val response = lightWalletClient.getBlockRange(
             BlockHeightUnsafe.from(
                 BlockHeight.new(
                     ZcashNetwork.Mainnet,
@@ -41,11 +41,18 @@ class TransactionCounterUtil {
                     910_000
                 )
             )
-        ).forEach { b ->
-            twig("h: ${b.header.size()}")
-            val s = b.serializedSize
+        )
+
+        assert(response is Response.Success)
+
+        /* Fixme: serializedSize is not available anymore
+        (response as Response.Success).result.forEach { compactBlock ->
+            twig("h: ${compactBlock.header.size}")
+            val s = compactBlock.serializedSize
             sizes[s] = (sizes[s] ?: 0) + 1
         }
+        */
+
         twig("sizes: ${sizes.toSortedMap()}")
     }
 
@@ -56,7 +63,8 @@ class TransactionCounterUtil {
         val outputCounts = mutableMapOf<Int, Int>()
         var totalOutputs = 0
         var totalTxs = 0
-        service.getBlockRange(
+
+        val response = lightWalletClient.getBlockRange(
             BlockHeightUnsafe.from(
                 BlockHeight.new(
                     ZcashNetwork.Mainnet,
@@ -68,23 +76,23 @@ class TransactionCounterUtil {
                     950_000
                 )
             )
-        ).forEach { b ->
-            b.header.size()
-            b.vtxList.map { it.outputsCount }.forEach { oCount ->
+        )
+
+        assert(response is Response.Success) { "Server communication failed." }
+
+        (response as Response.Success).result.forEach { compactBlock ->
+            compactBlock.vtx.map { it.outputs.size }.forEach { oCount ->
                 outputCounts[oCount] = (outputCounts[oCount] ?: 0) + oCount.coerceAtLeast(1)
                 totalOutputs += oCount
             }
-            b.vtxCount.let { count ->
+            compactBlock.vtx.size.let { count ->
                 txCounts[count] = (txCounts[count] ?: 0) + count.coerceAtLeast(1)
                 totalTxs += count
             }
         }
+
         twig("txs: $txCounts")
         twig("outputs: $outputCounts")
         twig("total: $totalTxs  $totalOutputs")
     }
 }
-/*
-
-
- */

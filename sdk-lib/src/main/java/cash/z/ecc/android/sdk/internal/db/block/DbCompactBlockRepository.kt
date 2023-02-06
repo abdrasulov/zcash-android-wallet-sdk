@@ -9,6 +9,7 @@ import cash.z.ecc.android.sdk.internal.repository.CompactBlockRepository
 import cash.z.ecc.android.sdk.model.BlockHeight
 import cash.z.ecc.android.sdk.model.ZcashNetwork
 import cash.z.wallet.sdk.internal.rpc.CompactFormats
+import co.electriccoin.lightwallet.client.model.CompactBlockUnsafe
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -30,8 +31,15 @@ class DbCompactBlockRepository private constructor(
     override suspend fun findCompactBlock(height: BlockHeight): CompactFormats.CompactBlock? =
         cacheDao.findCompactBlock(height.value)?.let { CompactFormats.CompactBlock.parseFrom(it) }
 
-    override suspend fun write(result: Sequence<CompactFormats.CompactBlock>) =
-        cacheDao.insert(result.map { CompactBlockEntity(it.height, it.toByteArray()) })
+    override suspend fun write(result: Sequence<CompactBlockUnsafe>) =
+        cacheDao.insert(
+            result.map {
+                CompactBlockEntity(
+                    it.height,
+                    byteArrayOf() // Fix me: Intentionally empty input
+                )
+            }
+        )
 
     override suspend fun rewindTo(height: BlockHeight) =
         cacheDao.rewindTo(height.value)
